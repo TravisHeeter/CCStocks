@@ -5,7 +5,9 @@ Scripts to help with buying and selling stocks on cookie clicker.
 You need to jQuerify Cookie Clicker in order to use this. You can do that using this [bookmarklet](https://mreidsma.github.io/bookmarklets/jquerify.html) (You may need to reload the page and try again if CC has been up for a while).
 
 ## Use
-In the console:
+Copy all the code, paste it in your browser's console, press Enter. (Only tested in Chrome)
+
+
 `> getBests()`
 
 This gives you a list of options, and alerts any really good deals.
