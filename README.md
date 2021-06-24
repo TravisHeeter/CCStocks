@@ -7,6 +7,8 @@ You need to jQuerify Cookie Clicker in order to use this. You can do that using 
 ## Use
 Copy all the code, paste it in your browser's console, press Enter. (Only tested in Chrome)
 
+Change the bankLevel to match your Bank's level. In the future this will occur automatically.
+
 
 `> getBests()`
 
