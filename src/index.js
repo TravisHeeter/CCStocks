@@ -4,15 +4,26 @@
  **
  */
 
-if (typeof bankLevel === "undefined") {
-  var bankLevel = 3
-}
-if (typeof hist === "undefined") {
-  var hist = []
-}
-if (typeof tHist === "undefined") {
-  var tHist = []
-}
+////////   JQuery to make the page to look better for stats   //////////
+// Change the font size of other info
+$(".bankGood .bankSymbol")
+  .css("font", "700 12px / 12px Tahoma, Arial, sans-serif")
+  .css("text-align", "left")
+
+// Change the position of the icons
+$(".bankGood .icon").css("margin", "-16px 0 -16px 79px")
+
+var bankLevel = parseInt(
+  $("#productLevel5")
+    .text()
+    .substring(
+      $("#productLevel5").text().indexOf(" ") + 1,
+      $("#productLevel5").text().length
+    ),
+  10
+)
+if (typeof hist === "undefined") var hist = []
+if (typeof tHist === "undefined") var tHist = []
 if (typeof symbols === "undefined") {
   var symbols = $(".bankGood .bankSymbol")
     .map((i, v) => $(v).clone().children().remove().end().text().trim())
@@ -52,6 +63,7 @@ class Stock {
     if (ownedStocks[this.name]) {
       this.oVal = ownedStocks[this.name]
       this.priceDel = Math.round((this.cVal - this.oVal) * 100) / 100
+      $(`#bankGood-${i}`).css("background", "rgb(148 251 237)")
     }
     this.pc = Math.round((this.cVal / this.bVal) * 100) // How close to base value the current prive is, expressed as a percentage
     this.i = i
@@ -59,17 +71,19 @@ class Stock {
     // Stats
     // this.p = hist.map((tick) => tick.stocks.o[this.name].cVal)
     // Remove consecutive duplicates, if you want the raw data, use the previous one
-    this.p = hist
-      .map((tick) => tick.stocks.o[this.name].cVal)
+    let p = hist
+      .map((tick) => tick.a[this.i][0])
+      .filter((price) => !Number.isNaN(price))
       .filter((price, i, a) => price !== a[i + 1])
-    if (this.p.length) {
-      this.s = this.p.reduce((sum, value) => sum + parseFloat(value, 10), 0)
-      this.l = this.p.length
+
+    if (p.length) {
+      this.s = p.reduce((sum, value) => sum + parseFloat(value, 10), 0)
+      this.l = p.length
 
       // Interquartile Range - used to determine outliers
       // 1. Orders the value from low to high
-      this.lowToHigh = this.p.sort((a, b) => a - b)
-      // 2. Finds the half-way & quarter point
+      this.lowToHigh = p.sort((a, b) => a - b)
+      // 2. Finds the half-way & quarter points
       this.half = Math.round(this.l / 2)
       this.quart = Math.round(this.half / 2)
       // 3. Figures the index of quartiles 1 and 3
@@ -82,121 +96,110 @@ class Stock {
       this.iqr = this.q3 - this.q1
 
       this.a = Math.round((this.s / this.l) * 100) / 100
-      this.hi = Math.max(...this.p)
-      this.lo = Math.min(...this.p)
+      this.hi = Math.max(...p)
+      this.lo = Math.min(...p)
       this.sd =
         Math.round(
           Math.sqrt(
-            this.p
+            p
               .map((x) => Math.pow(parseFloat(x, 10) - this.a, 2))
               .reduce((a, b) => a + b) / this.l
           ) * 100
         ) / 100
 
       // Stats for prices higher than average
-      this.hp = this.p.filter((p) => p > this.a)
-      if (this.hp.length) {
-        this.hs = this.hp.reduce((sum, value) => sum + parseFloat(value, 10), 0)
-        this.hl = this.hp.length
+      let hp = p.filter((p) => p > this.a)
+      if (hp.length) {
+        this.hs = hp.reduce((sum, value) => sum + parseFloat(value, 10), 0)
+        this.hl = hp.length
         this.ha = Math.round((this.hs / this.hl) * 100) / 100
-        this.hlo = Math.min(...this.hp)
+        this.hlo = Math.min(...hp)
         this.hsd =
           Math.round(
             Math.sqrt(
-              this.hp
+              hp
                 .map((x) => Math.pow(parseFloat(x, 10) - this.ha, 2))
-                .reduce((a, b) => a + b) / this.hp.length
+                .reduce((a, b) => a + b) / hp.length
             ) * 100
           ) / 100
-        this.hr = [
-          `Current Value:$${this.cVal}, Mean:$${this.a}, High:$${
-            this.hi
-          }, Low:$${this.lo}, Hi-Lo Range:$${financial(
-            this.hi - this.lo
-          )}, Standard: ${this.sd}, Span:$${financial(
-            this.a - this.sd
-          )} - $${financial(this.a + this.sd)}, p:${this.l}`,
-          `Hi Span:$${financial(this.ha - this.hsd)} - $${financial(
-            this.ha + this.hsd
-          )}, HiP:${this.hl}, HM:$${this.ha}, LoHi:$${this.hlo}, HSD:${
-            this.hsd
-          }`
-        ]
-        this.sellNoteRange = this.cVal >= this.ha - this.hsd
+        this.hr = () => {
+          return [
+            `Current Value:$${this.cVal}, Mean:$${this.a}, High:$${
+              this.hi
+            }, Low:$${this.lo}, Hi-Lo Range:$${financial(
+              this.hi - this.lo
+            )}, Standard: ${this.sd}, Span:$${financial(
+              this.a - this.sd
+            )} - $${financial(this.a + this.sd)}, p:${this.l}`,
+            `Hi Span:$${financial(this.ha - this.hsd)} - $${financial(
+              this.ha + this.hsd
+            )}, HiP:${this.hl}, HM:$${this.ha}, LoHi:$${this.hlo}, HSD:${
+              this.hsd
+            }`
+          ]
+        }
+        this.sellNoteRange = this.cVal >= this.a + this.sd
+        this.sellAlertRange = this.cVal >= this.a + this.sd * 2
       }
 
       // Stats for prices lower than average
-      this.lp = this.p.filter((p) => p < this.a)
-      if (this.lp.length) {
-        this.ls = this.lp.reduce((sum, value) => sum + parseFloat(value, 10), 0)
-        this.ll = this.lp.length
+      let lp = p.filter((price) => price < this.a)
+      if (lp.length) {
+        this.ls = lp.reduce((sum, value) => sum + parseFloat(value, 10), 0)
+        this.ll = lp.length
         this.la = Math.round((this.ls / this.ll) * 100) / 100
-        this.lhi = Math.max(...this.lp)
+        this.lhi = Math.max(...lp)
         this.lsd =
           Math.round(
             Math.sqrt(
-              this.lp
+              lp
                 .map((x) => Math.pow(parseFloat(x, 10) - this.la, 2))
-                .reduce((a, b) => a + b) / this.lp.length
+                .reduce((a, b) => a + b) / lp.length
             ) * 100
           ) / 100
-        this.lr = [
+        this.lr = () => {
+          return [
+            `C:$${this.cVal}, M:$${this.a}, H:$${this.hi}, L:$${
+              this.lo
+            }, HLSpan:$${financial(this.hi - this.lo)}, SD: ${
+              this.sd
+            }, SDRange:$${financial(this.a - this.sd)} - $${financial(
+              this.a + this.sd
+            )}, p:${this.l}`,
+            `Low SDRange:$${financial(this.la - this.lsd)} - ${financial(
+              this.la + this.lsd
+            )}, LoP:${this.ll}, LM:${this.la}, HiLo:$${this.lhi}, LSD:${
+              this.lsd
+            }`
+          ]
+        }
+        this.buyNoteRange = this.cVal <= this.a - this.sd
+        this.buyAlertRange = this.cVal <= this.a - this.sd * 2
+      }
+
+      this.r = () => {
+        return [
           `C:$${this.cVal}, M:$${this.a}, H:$${this.hi}, L:$${
             this.lo
           }, HLSpan:$${financial(this.hi - this.lo)}, SD: ${
             this.sd
-          }, SDRange:$${financial(this.a - this.sd)} - $${financial(
+          }, M+-SD:$${financial(this.a - this.sd)} - $${financial(
             this.a + this.sd
           )}, p:${this.l}`,
-          `Low SDRange:$${financial(this.la - this.lsd)} - ${financial(
+          `HiP:${this.hl}, HM:$${this.ha}, LoHi:$${this.hlo}, HSD:${
+            this.hsd
+          }, HM+-HSD:$${financial(this.ha - this.hsd)} - $${financial(
+            this.ha + this.hsd
+          )}`,
+          `LoP:${this.ll}, LM:${this.la}, HiLo:$${this.lhi}, LSD:${
+            this.lsd
+          }, LM+-LSD:$${financial(this.la - this.lsd)} - ${financial(
             this.la + this.lsd
-          )}, LoP:${this.ll}, LM:${this.la}, HiLo:$${this.lhi}, LSD:${this.lsd}`
+          )}`
         ]
-        this.buyNoteRange = this.cVal < this.la + this.lsd
-        this.buyAlertRange = this.cVal < this.a - this.sd
       }
 
-      this.r = [
-        `C:$${this.cVal}, M:$${this.a}, H:$${this.hi}, L:$${
-          this.lo
-        }, HLSpan:$${financial(this.hi - this.lo)}, SD: ${
-          this.sd
-        }, M+-SD:$${financial(this.a - this.sd)} - $${financial(
-          this.a + this.sd
-        )}, p:${this.l}`,
-        `HiP:${this.hl}, HM:$${this.ha}, LoHi:$${this.hlo}, HSD:${
-          this.hsd
-        }, HM+-HSD:$${financial(this.ha - this.hsd)} - $${financial(
-          this.ha + this.hsd
-        )}`,
-        `LoP:${this.ll}, LM:${this.la}, HiLo:$${this.lhi}, LSD:${
-          this.lsd
-        }, LM+-LSD:$${financial(this.la - this.lsd)} - ${financial(
-          this.la + this.lsd
-        )}`
-      ]
-
-      // Change the View/Hide Button to Stat info
-      $(`#bankGood-${i}-viewHide`)
-        .html(`${this.bVal}<p></p>${this.a}<p></p>${this.sd}`)
-        .css("background", "black")
-      // Change the font size of other info
-      $(".bankGood .bankSymbol")
-        .css("font", "700 12px / 12px Tahoma, Arial, sans-serif")
-        .css("text-align", "left")
-      //
-      $(".bankGood .bankSymbol")
-        .filter((i, v) => $(v).text().includes("value"))
-        .map((i, v) =>
-          $(v).text(
-            $(v)
-              .text()
-              .substring($(v).text().indexOf("$"), $(v).text().length) +
-              " | " +
-              this.ownPrice
-          )
-        )
-      $(".bankGood .icon").css("margin", "-16px 0 -16px 79px")
+      makeHtmlChanges(i, this)
     } else {
       this.s =
         "There is no historical data (we're looking for the variable, `hist`)"
@@ -204,13 +207,43 @@ class Stock {
   }
 }
 
+function makeHtmlChanges(i, stock) {
+  // Change the View/Hide Button to Stat info
+  $(`#bankGood-${i}-viewHide`)
+    .html(`${stock.bVal}<p></p>${stock.a}<p></p>${stock.sd}`)
+    .css("background", "black")
+
+  // Show the ownPrice next to the current price
+  // 1. Get the parent element
+  let prnt = $(`#bankGood-${i}-val`).closest("div")
+  // 2. Delete any child spans other than the current price
+  prnt
+    .find("span")
+    .filter((i, v) => i > 0)
+    .remove()
+
+  // 3. If the stock is owned, put the price on display next to the current value
+  if (stock.oVal != -1) {
+    // 4. Save the html for later
+    let html = prnt.html()
+    //5. Replace the html with itself plue the owned value
+    prnt.html(
+      `${html}<span id="coDivide-0"> | </span><span id="ownPrice-0">$${stock.oVal}</span>`
+    )
+  }
+}
+
 class Stocks {
   constructor() {
-    this.a = symbols.map((symbol, i) => new Stock(i)).sort(compare)
     this.o = {}
-
-    // build the object
-    this.a.every((stock) => (this.o[stock.name] = stock))
+    this.a = symbols
+      .map((symbol, i) => {
+        let stock = new Stock(i)
+        this.o[symbol] = stock
+        return stock
+      })
+      .sort(compare)
+    sRef = this
   }
 }
 
@@ -226,12 +259,11 @@ function compare(a, b) {
 
 function getBestBuy(stocks) {
   let unownedStocks = stocks.a.filter((stock) => stock.oVal == -1)
-  let buys = {}
 
   // Buy Note Range means the current value is within 1 sd of the low mean.
-  unownedStocks
+  return unownedStocks
     .filter((stock) => stock.buyNoteRange)
-    .every((stock, i) => {
+    .map((stock, i) => {
       if (stock.buyAlertRange)
         alert(
           `BUY ${stock.name}!! It's less than 1 SD away from the mean (c:$${
@@ -240,31 +272,28 @@ function getBestBuy(stocks) {
             stock.a - stock.sd
           )}), and at ${stock.pc}% of base value. Own Price: $${
             stock.oVal
-          }; Report:: ${stock.lr}`
+          }; Report:: ${stock.lr()}`
         )
 
       // Color the good buys blue
       $(`#bankGood-${stock.i}`).css("background", "#3836ab")
 
-      buys[stock.name] = [
+      return [
         `${i + 1}: ${stock.name} is ${stock.pc}% of base. Buying below $${rCent(
           (stock.a - stock.sd) / stock.bVal
         )}% would be rare.`,
-        `  LoReport:: ${stock.lr}`
+        `  LoReport:: ${stock.lr()}`
       ]
     })
-  return buys
 }
 
 function getBestSell(stocks) {
   let stocksIOwn = stocks.a.filter((stock) => stock.oVal != -1)
 
-  let sells = {}
-
   // sellNoteRange = cVal >= himean-hisd, so within one standard deviation of the high mean
-  stocksIOwn
+  return stocksIOwn
     .filter((stock) => stock.sellNoteRange) // only show stocks whose current value is within the high range
-    .every((stock, i) => {
+    .map((stock, i) => {
       if (stock.cVal > stock.ha + stock.sd)
         alert(
           `Consider selling ${
@@ -277,23 +306,21 @@ function getBestSell(stocks) {
           
           Own Price: $${stock.oVal}; 
           
-          Report:: ${stock.hr}`
+          Report:: ${stock.hr()}`
         )
 
       // color the background of good sells pink
       $(`#bankGood-${stock.i}`).css("background", "#8e006f")
 
-      sells[stock.name] = [
+      return [
         `${i + 1}: ${stock.name} is ${stock.pc}% of Base. Selling above ${rCent(
           (stock.a + stock.sd) / stock.bVal
         )}% is above 1 SD from mean (${rCent(
           (stock.cVal - (stock.a + stock.sd)) / stock.sd
         )}% of the sd above the sd). Own Price: $${stock.oVal}`,
-        `  HiReport:: ${stock.hr}`
+        `  HiReport:: ${stock.hr()}`
       ]
     })
-
-  return sells
 }
 
 function rCent(n) {
@@ -301,8 +328,7 @@ function rCent(n) {
 }
 
 function getBests() {
-  sRef = new Stocks()
-  let stocks = sRef
+  let stocks = new Stocks()
 
   // Change the background colors back to black
   stocks.a.every((s, i) =>
@@ -324,10 +350,13 @@ function getBests() {
 }
 
 class Tick {
-  constructor(stocks = sRef, dt = new Date()) {
-    this.stocks = stocks
-    this.bankLevel = bankLevel
+  constructor(s = sRef, dt = new Date(), bl = bankLevel) {
+    this.a = s.a.map((stock, i) => {
+      return stock.oVal ? [stock.cVal, stock.oVal] : [stock.cVal]
+    })
+    this.bl = bl
     this.dt = dt
+
     hist.push(this)
   }
 }
@@ -348,20 +377,23 @@ function getSymbolAndValue(s) {
   }
 }
 
+// Does not change sRef, its assumed sRef is updated by b() because its often run right before a transaction is made
 class Transaction {
   constructor(s, type) {
     let sv = getSymbolAndValue(s)
-    let tick = new Tick()
     this.symbol = sv[0]
+    this.value = sv[1]
+
+    new Tick()
+
     this.dt = new Date()
     this.type = type
-    this.stock = sRef.o[s]
 
-    if (type == "b") ownedStocks[sv[0]] = sv[1]
-    else delete ownedStocks[sv[0]]
+    if (type === "b") ownedStocks[this.symbol] = this.value
+    else delete ownedStocks[this.symbol]
 
     tHist.push(this)
-    return this
+    return [this, sRef]
   }
 }
 function bu(s) {
@@ -369,19 +401,6 @@ function bu(s) {
 }
 function se(s) {
   return new Transaction(s, "s")
-}
-
-class Report {
-  constructor(stocks = sRef) {
-    this.tick = new Tick(stocks)
-    hist.push(this.tick)
-  }
-}
-
-function sr(i) {
-  if (typeof i !== "string") i = symbols[i]
-  this.report = new Report()
-  return this.report.tick.stocks.o[i].r
 }
 function b() {
   return getBests()
@@ -396,4 +415,43 @@ function imData(exportData) {
   let j = JSON.parse(exportData)
   j.hist.every((t) => new Tick(t.stocks, t.dt))
   ownedStocks = j.ownedStocks
+}
+
+/**
+ * These last two functions can cause a lot of damage.
+ * Be sure to check the result before setting it equal to hist
+ * 0. Export the historical data with `> exData()` and save it somewhere else.
+ * 1. > var h = removeNaNFromHist()
+ * 2. Check that the intended results have occurred
+ * 3. if you are satisfied, > hist = h
+ */
+
+function removeNaNFromHist() {
+  return hist.filter((tick) => !Number.isNaN(tick.stocks.o.CRL.a))
+}
+function deletePFromHist() {
+  return hist.map((tick) =>
+    tick.stocks.a.every((stock) => {
+      delete stock.p
+      delete tick.stocks.o[stock.name].p
+    })
+  )
+}
+// The ids were accidentally removed at one point, but this shouldn't happen anymore, but just in case...
+function addIdsBack() {
+  $(".bankGood .bankSymbol")
+    .filter((i, v) => $(v).text().includes("$"))
+    .each((i, v) =>
+      $(v).html(
+        `<span id="bankGood-${i}-val">${$(v).text().split(" |")[0]}</span>`
+      )
+    )
+}
+
+// Clean hist to make it as small as possible for localStorage.
+// hist should be the only thing that persists
+function cleanHist() {
+  return hist.map((tick) => {
+    return new Tick(tick.stocks, tick.dt, tick.bankLevel)
+  })
 }
