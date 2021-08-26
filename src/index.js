@@ -4,6 +4,40 @@
  **
  */
 
+/****
+ **
+ ** Instructions
+ ** Step 0: JQuerify
+ ** Step 1: Copy this code and paste it in the console of Cookie Clicker
+ ** Step 2: Run `getBests()`
+ **
+ */
+// 
+function getBests() {
+  let stocks = new Stocks()
+
+  // Change the background colors back to black
+  stocks.a.every((s, i) =>
+    $(`#bankGood-${i}`).css("background", "rgba(0, 0, 0, 0.9)")
+  )
+
+  let tick = new Tick(stocks)
+  let bestBuys = getBestBuy(stocks)
+  let bestSells = getBestSell(stocks)
+  let bests = {
+    Buys: bestBuys,
+    Sells: bestSells,
+    Tick: tick
+  }
+  if (!Object.keys(bestBuys).length) delete bests.Buys
+  if (!Object.keys(bestSells).length) delete bests.Sells
+
+  return bests
+}
+
+
+
+
 ////////   JQuery to make the page to look better for stats   //////////
 // Change the font size of other info
 $(".bankGood .bankSymbol")
@@ -325,28 +359,6 @@ function getBestSell(stocks) {
 
 function rCent(n) {
   return Math.round(n * 100)
-}
-
-function getBests() {
-  let stocks = new Stocks()
-
-  // Change the background colors back to black
-  stocks.a.every((s, i) =>
-    $(`#bankGood-${i}`).css("background", "rgba(0, 0, 0, 0.9)")
-  )
-
-  let tick = new Tick(stocks)
-  let bestBuys = getBestBuy(stocks)
-  let bestSells = getBestSell(stocks)
-  let bests = {
-    Buys: bestBuys,
-    Sells: bestSells,
-    Tick: tick
-  }
-  if (!Object.keys(bestBuys).length) delete bests.Buys
-  if (!Object.keys(bestSells).length) delete bests.Sells
-
-  return bests
 }
 
 class Tick {
