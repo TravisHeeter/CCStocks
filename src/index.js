@@ -10,9 +10,11 @@
  ** Step 0: JQuerify
  ** Step 1: Copy this code and paste it in the console of Cookie Clicker
  ** Step 2: Run `getBests()`
+ ** Step 3: Run `buy(s)` or `sell(s)` when you buy or sell stocks
  **
  */
-// 
+
+// Analyzes the data to get the best deals and sends popups if there are good deals
 function getBests() {
   let stocks = new Stocks()
 
@@ -35,7 +37,13 @@ function getBests() {
   return bests
 }
 
-
+// Run these when you buy or sell a stock like so: buy("JAM")
+function buy(s) {
+  return new Transaction(s, "b")
+}
+function sell(s) {
+  return new Transaction(s, "s")
+}
 
 
 ////////   JQuery to make the page to look better for stats   //////////
@@ -407,12 +415,6 @@ class Transaction {
     tHist.push(this)
     return [this, sRef]
   }
-}
-function bu(s) {
-  return new Transaction(s, "b")
-}
-function se(s) {
-  return new Transaction(s, "s")
 }
 function b() {
   return getBests()
